@@ -32,6 +32,7 @@ SUMMARY_FIELDS = ("proposal_id", "logged_at", "job_title_or_hash", "decision", "
 
 DEFAULT_LIST_LIMIT = 5
 _SUMMARY_MAX_CHARS = 140
+_SUMMARY_MIN_CHARS = 48
 
 
 def _load_json(path: Path) -> Any:
@@ -60,18 +61,34 @@ def get_experience() -> dict:
 
 
 def _summarize(text: str | None, max_chars: int = _SUMMARY_MAX_CHARS) -> str:
-    """One-line summary of `text`: the first sentence if it's short enough,
-    otherwise a truncated prefix. No LLM/embedding call — just a cheap,
-    deterministic trim."""
+    """One-line summary of `text`: the first sentence, plus however many
+    more sentences it takes to pass a minimum length, then a truncated
+    prefix if that's still too long. No LLM/embedding call — just a cheap,
+    deterministic trim.
+
+    Stopping at the first sentence alone used to be enough, but a job
+    posting can require the proposal to open with a short compliance
+    phrase (e.g. "MVP READY."), which would otherwise become the entire
+    summary — accurate, but useless for browsing history later. Pulling in
+    more sentences until there's actually something to read fixes that."""
     text = (text or "").strip()
     if not text:
         return ""
-    period = text.find(". ")
-    if 0 < period <= max_chars:
-        return text[: period + 1]
-    if len(text) <= max_chars:
-        return text
-    return text[: max_chars - 1].rstrip() + "…"
+
+    sentences = [s.strip() for s in text.split(". ") if s.strip()]
+    summary = sentences[0] if sentences else text
+
+    i = 1
+    while len(summary) < _SUMMARY_MIN_CHARS and i < len(sentences):
+        summary = f"{summary}. {sentences[i]}"
+        i += 1
+
+    if not summary.endswith((".", "!", "?")):
+        summary += "."
+
+    if len(summary) <= max_chars:
+        return summary
+    return summary[: max_chars - 1].rstrip() + "…"
 
 
 def _matches_filter(entry: dict, filter: dict) -> bool:

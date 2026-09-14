@@ -113,6 +113,32 @@ async def test_log_decision_then_get_past_proposals_round_trips(tmp_data_dir, py
             assert "full_draft" not in summary  # the whole point: never leak the full draft here
 
 
+async def test_summary_expands_past_a_short_leading_compliance_phrase(tmp_data_dir, python_executable):
+    # Regression test for a real run (MVP/SaaS proposal, 2026-09-14): the
+    # job posting required the proposal to open with "MVP READY." — a
+    # short, period-terminated compliance phrase the old summary heuristic
+    # (cut at the first ". ") turned into the *entire* summary, which was
+    # accurate but useless for browsing history later.
+    params = _server_params(tmp_data_dir, python_executable)
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            opening = (
+                "MVP READY. You're not really asking for four CRUD screens — "
+                "you're asking someone to decide, in real time, what has to exist "
+                "before early users see this and what can wait until after the "
+                "idea is validated, because building the wrong things fast is "
+                "worse than building nothing at all."
+            )
+            draft = _sample_draft("sha256:mvp-job", opening)
+            logged = await _approve(session, "sha256:mvp-job", draft=draft)
+            record = json.loads(logged.content[0].text)
+
+            assert record["summary"] != "MVP READY."
+            assert len(record["summary"]) > len("MVP READY.")
+            assert "CRUD screens" in record["summary"]
+
+
 async def test_get_past_proposals_never_includes_full_draft_or_notes(tmp_data_dir, python_executable):
     params = _server_params(tmp_data_dir, python_executable)
     async with stdio_client(params) as (read, write):
