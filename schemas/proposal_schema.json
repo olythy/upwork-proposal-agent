@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://upwork-proposal-agent/schemas/proposal_schema.json",
+  "title": "Upwork Proposal Draft",
+  "description": "Structured representation of an Upwork proposal draft. Every substantive claim must cite a source_ref pointing to an entry in experience_profile.json.",
+  "type": "object",
+  "required": [
+    "opening_observation",
+    "problem_understanding",
+    "relevant_experience",
+    "insight_or_question",
+    "closing",
+    "meta"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "opening_observation": {
+      "type": "string",
+      "description": "Strong, specific observation about the client's actual problem, based on a close reading of the posting.",
+      "minLength": 1
+    },
+    "problem_understanding": {
+      "type": "string",
+      "description": "Demonstration of understanding of the client's product/situation.",
+      "minLength": 1
+    },
+    "relevant_experience": {
+      "type": "object",
+      "description": "Experience claims relevant to this job, each tied to a real experience_profile.json entry.",
+      "required": ["claims"],
+      "additionalProperties": false,
+      "properties": {
+        "claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["text", "source_ref"],
+            "additionalProperties": false,
+            "properties": {
+              "text": {
+                "type": "string",
+                "description": "The claim as it appears/informs the proposal text.",
+                "minLength": 1
+              },
+              "source_ref": {
+                "type": "string",
+                "description": "ID of the experience_profile.json entry that substantiates this claim (e.g. 'exp-002').",
+                "pattern": "^exp-[0-9]{3}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "insight_or_question": {
+      "type": "string",
+      "description": "A small insight or suggestion that already provides value on its own, and/or a smart question about what is actually blocking progress.",
+      "minLength": 1
+    },
+    "closing": {
+      "type": "string",
+      "description": "Natural, simple closing.",
+      "minLength": 1
+    },
+    "target_rate": {
+      "type": "string",
+      "description": "Optional target hourly/project rate, included when the posting asks for one."
+    },
+    "availability": {
+      "type": "string",
+      "description": "Optional availability statement, included when the posting asks for one."
+    },
+    "meta": {
+      "type": "object",
+      "required": ["job_posting_hash", "created_at", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "job_posting_hash": {
+          "type": "string",
+          "description": "Stable hash (e.g. sha256) of the source job posting text, for traceability."
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "validated", "approved", "rejected"]
+        }
+      }
+    }
+  }
+}

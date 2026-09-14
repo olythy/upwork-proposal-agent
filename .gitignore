@@ -1,0 +1,41 @@
+# Secrets — never commit these
+.env
+.env.*
+*.key
+*.pem
+secrets.json
+credentials.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+
+# Real professional experience data: personal information, never committed.
+# Copy experience_profile.example.json to experience_profile.json (or run
+# `make install`) to bootstrap a local, untracked placeholder to replace with
+# your own real data (see README).
+mcp-server/profile_store/data/experience_profile.json
+
+# Real proposal history: contains real job postings, real proposal text,
+# and the resulting client-facing decisions. Never commit this — copy
+# proposal_log.json.example to proposal_log.json (or run `make install`) to
+# bootstrap a local, untracked log (see README).
+mcp-server/profile_store/data/proposal_log.json
+
+# Transient, single-use approval tokens (see store.py: issue_gate_token /
+# log_decision). Regenerated as needed; never meaningful to commit.
+mcp-server/profile_store/data/.gate_tokens.json
+
+# Catch-all for any other local file that accumulates real job postings or
+# personal data outside of the proposal_log.json location above.
+*.local.json
+local/

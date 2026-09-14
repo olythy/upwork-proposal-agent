@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "id": "exp-000",
+      "title": "Example entry — replace with your real experience",
+      "detail": "Describe one concrete, verifiable piece of experience here: what you did, for whom, and when. Every claim a generated proposal makes must trace back to an entry like this one via its id.",
+      "evidence": "How this can be verified — e.g. resume, a public repo, a client reference, a portfolio link."
+    }
+  ]
+}

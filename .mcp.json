@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "profile_store": {
+      "command": ".venv/bin/python",
+      "args": ["mcp-server/profile_store/server.py"]
+    }
+  }
+}
