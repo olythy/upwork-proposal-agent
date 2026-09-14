@@ -115,3 +115,13 @@ fields/problems in a targeted way (e.g. replace an invalid `source_ref`
 with a real one, or drop that claim; shorten the text if it's too long; add
 the missing rate if the posting asked for one). Submit the corrected draft
 for re-validation.
+
+**Retry cap: 2 automatic correction passes, then stop and ask.** This isn't
+a safety limit — `pre-submit-gate.py` independently blocks anything that
+isn't `status: "pass"`, no matter how many retries happened, so a stuck
+loop can never let unvalidated text through. It's a cost/time limit: after
+2 failed validation attempts on the same draft, don't attempt a 3rd
+automatic rewrite. Instead, show the current draft and the unresolved
+`issues[]` as they stand, and ask the user how to proceed (e.g. relax a
+rule, provide the missing information yourself, or accept a specific
+trade-off) rather than continuing to loop on your own.
