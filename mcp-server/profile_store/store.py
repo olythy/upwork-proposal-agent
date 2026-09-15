@@ -130,11 +130,14 @@ def get_past_proposals(filter: dict | None = None, limit: int = DEFAULT_LIST_LIM
 
 
 def _load_gate_tokens() -> dict:
-    if not GATE_TOKENS_PATH.exists():
-        return {}
+    # No pre-check via .exists(): that would leave a check-then-use gap if
+    # the file disappears between the check and the open() below (two
+    # concurrent invocations against the same real data dir can race on
+    # this file). Catching FileNotFoundError here handles both "never
+    # existed" and "existed a moment ago" the same way, atomically.
     try:
         return _load_json(GATE_TOKENS_PATH)
-    except (json.JSONDecodeError, FileNotFoundError):
+    except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
