@@ -105,6 +105,20 @@ def test_check_required_fields_catches_claim_missing_text(valid_draft):
     assert "relevant_experience.claims[0].text" in missing
 
 
+def test_check_required_fields_catches_missing_greeting(valid_draft):
+    draft = copy.deepcopy(valid_draft)
+    del draft["greeting"]
+    missing = validation.check_required_fields(draft)
+    assert "greeting" in missing
+
+
+def test_check_required_fields_catches_missing_sign_off(valid_draft):
+    draft = copy.deepcopy(valid_draft)
+    del draft["sign_off"]
+    missing = validation.check_required_fields(draft)
+    assert "sign_off" in missing
+
+
 # ---------------------------------------------------------------------------
 # check_length
 # ---------------------------------------------------------------------------
@@ -155,3 +169,32 @@ def test_run_checks_on_fabricated_source_ref_draft_flags_it(draft_with_fake_sour
     report = validation.run_checks(draft_with_fake_source_ref, test_profile)
     assert len(report["invalid_source_refs"]) == 1
     assert "exp-008" in report["invalid_source_refs"][0]
+
+
+def test_run_checks_catches_banned_phrase_in_greeting(valid_draft, test_profile):
+    draft = copy.deepcopy(valid_draft)
+    draft["greeting"] = "Dear Sir/Madam,"
+    report = validation.run_checks(draft, test_profile)
+    assert "Dear Sir/Madam" in report["banned_phrases_found"]
+
+
+def test_run_checks_catches_banned_phrase_in_sign_off(valid_draft, test_profile):
+    draft = copy.deepcopy(valid_draft)
+    draft["sign_off"] = "As an AI, best regards,"
+    report = validation.run_checks(draft, test_profile)
+    assert "As an AI" in report["banned_phrases_found"]
+
+
+def test_run_checks_word_count_excludes_greeting_and_sign_off(valid_draft, test_profile):
+    # greeting/sign_off are boilerplate, not content — padding them must not
+    # change word_count or move length_ok, since the 150-350 range is
+    # calibrated on the substantive fields only.
+    baseline = validation.run_checks(valid_draft, test_profile)
+
+    padded = copy.deepcopy(valid_draft)
+    padded["greeting"] = "Hi " + " ".join(["extra"] * 100) + ","
+    padded["sign_off"] = "Best " + " ".join(["padding"] * 100) + ","
+    padded_report = validation.run_checks(padded, test_profile)
+
+    assert padded_report["word_count"] == baseline["word_count"]
+    assert padded_report["length_ok"] == baseline["length_ok"]

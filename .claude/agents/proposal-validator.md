@@ -73,6 +73,26 @@ different than what its `source_ref` entry actually supports (e.g. if the
 entry says "Stripe integration," the claim can't say "led the entire
 payment gateway architecture including a PCI compliance audit").
 
+### 4. Greeting and sign-off correctness
+If the job posting text is available, check:
+- If the posting requires a literal opening phrase (e.g. "start your
+  proposal with X"), `greeting` must start with that phrase verbatim, and
+  `opening_observation` must NOT also contain it — the phrase belongs in
+  exactly one place.
+- If the posting reveals the client's name, `greeting` should be
+  personalized with it (e.g. "Hi John,"). If no name is discoverable,
+  a generic opener is fine — don't fail the draft over this alone.
+- `sign_off` should be a plausible fit for the posting's register (a
+  clearly casual/startup posting paired with an overly formal "Best
+  regards," or vice versa is a minor issue, not a critical one) and must
+  NOT include a name — the name is appended by the renderer, not the
+  skill.
+
+If no posting text was provided to you, skip the phrase/name checks but
+still confirm `greeting` and `sign_off` are present and non-generic
+(caught by Part 1's banned-phrase scan already, but a plain "Hi," with
+nothing else wrong is fine — this isn't the place to demand more).
+
 ### 5. Requested hard data
 If the job posting text is available and explicitly asks for a rate,
 availability, or residency:

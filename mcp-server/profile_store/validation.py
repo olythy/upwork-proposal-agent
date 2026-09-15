@@ -32,11 +32,13 @@ DEFAULT_MIN_WORDS = 150
 DEFAULT_MAX_WORDS = 350
 
 REQUIRED_TOP_LEVEL_FIELDS = [
+    "greeting",
     "opening_observation",
     "problem_understanding",
     "relevant_experience",
     "insight_or_question",
     "closing",
+    "sign_off",
     "meta",
 ]
 REQUIRED_CLAIM_FIELDS = ["text", "source_ref"]
@@ -102,8 +104,10 @@ def check_length(text: str, min_words: int = DEFAULT_MIN_WORDS, max_words: int =
 
 
 def collect_text(draft: dict) -> str:
-    """Concatenate every narrative text field, for banned-phrase and length
-    checks that operate on the proposal as a whole."""
+    """Concatenate the substantive narrative fields only — used for the
+    length check. Deliberately excludes `greeting` and `sign_off`: they're
+    boilerplate, not content, and the 150-350 word range is calibrated on
+    the actual argument, not on salutations."""
     parts = [
         draft.get("opening_observation", ""),
         draft.get("problem_understanding", ""),
@@ -112,6 +116,15 @@ def collect_text(draft: dict) -> str:
     ]
     claims = draft.get("relevant_experience", {}).get("claims", [])
     parts.extend(c.get("text", "") for c in claims)
+    return " ".join(p for p in parts if p)
+
+
+def collect_all_text(draft: dict) -> str:
+    """Concatenate every text field, including `greeting` and `sign_off` —
+    used for banned-phrase scanning, which must catch a stale phrase (e.g.
+    "Dear Sir/Madam") regardless of which field it ends up in. Not used for
+    the length check — see collect_text()."""
+    parts = [draft.get("greeting", ""), collect_text(draft), draft.get("sign_off", "")]
     return " ".join(p for p in parts if p)
 
 
@@ -124,13 +137,13 @@ def run_checks(
 ) -> dict:
     """Run all four deterministic checks and return a structured report the
     proposal-validator subagent layers its own judgment on top of."""
-    text = collect_text(draft)
+    content_text = collect_text(draft)
     return {
         "invalid_source_refs": check_source_refs(draft, profile),
-        "banned_phrases_found": check_banned_phrases(text, banned_phrases),
+        "banned_phrases_found": check_banned_phrases(collect_all_text(draft), banned_phrases),
         "missing_required_fields": check_required_fields(draft),
-        "length_ok": check_length(text, min_words, max_words),
-        "word_count": len(text.split()),
+        "length_ok": check_length(content_text, min_words, max_words),
+        "word_count": len(content_text.split()),
     }
 
 

@@ -43,6 +43,11 @@ PROJECT_ROOT = HERE.parent.parent
 SERVER_SCRIPT = PROJECT_ROOT / "mcp-server" / "profile_store" / "server.py"
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"
 
+# The sign-off phrase (e.g. "Best,") is the skill's call, matched to the
+# posting's register — but the name itself never varies, so it's appended
+# here rather than asked of the skill on every draft.
+SIGNER_NAME = "Károly"
+
 
 def _python_for_server() -> str:
     if VENV_PYTHON.exists():
@@ -63,6 +68,7 @@ def save_json(path: Path, data: dict) -> None:
 
 def render_draft(draft: dict) -> str:
     lines = ["=" * 72, "PROPOSAL DRAFT", "=" * 72]
+    lines.append(f"\n[Greeting]\n{draft.get('greeting', '')}")
     lines.append(f"\n[1] Opening observation:\n{draft.get('opening_observation', '')}")
     lines.append(f"\n[2] Problem understanding:\n{draft.get('problem_understanding', '')}")
     claims = draft.get("relevant_experience", {}).get("claims", [])
@@ -75,6 +81,7 @@ def render_draft(draft: dict) -> str:
         lines.append(f"\nTarget rate: {draft['target_rate']}")
     if draft.get("availability"):
         lines.append(f"Availability: {draft['availability']}")
+    lines.append(f"\n[Sign-off]\n{draft.get('sign_off', '')}\n{SIGNER_NAME}")
     lines.append(f"\nStatus: {draft.get('meta', {}).get('status', 'unknown')}")
     return "\n".join(lines)
 
@@ -83,11 +90,16 @@ def render_final_text(draft: dict) -> str:
     """Plain-prose rendering of the approved draft, suitable for pasting
     straight into Upwork. Shown to the human at approval time; the
     structured `draft` itself (not this rendering) is what gets logged as
-    `full_draft` — this text can always be regenerated from it later."""
-    paragraphs = [draft.get("opening_observation", ""), draft.get("problem_understanding", "")]
+    `full_draft` — this text can always be regenerated from it later.
+
+    Each claim gets its own paragraph rather than being merged into one —
+    a proposal with several claims fused into a single dense block reads
+    as a wall of text; keeping them as separate short paragraphs doesn't."""
+    paragraphs = [draft.get("greeting", "")]
+    paragraphs.append(draft.get("opening_observation", ""))
+    paragraphs.append(draft.get("problem_understanding", ""))
     claims = draft.get("relevant_experience", {}).get("claims", [])
-    if claims:
-        paragraphs.append(" ".join(c.get("text", "") for c in claims))
+    paragraphs.extend(c.get("text", "") for c in claims)
     paragraphs.append(draft.get("insight_or_question", ""))
     paragraphs.append(draft.get("closing", ""))
     extras = []
@@ -97,6 +109,9 @@ def render_final_text(draft: dict) -> str:
         extras.append(f"Availability: {draft['availability']}")
     if extras:
         paragraphs.append(" | ".join(extras))
+    sign_off = draft.get("sign_off", "")
+    if sign_off:
+        paragraphs.append(f"{sign_off}\n{SIGNER_NAME}")
     return "\n\n".join(p for p in paragraphs if p)
 
 

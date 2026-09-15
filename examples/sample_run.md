@@ -12,6 +12,13 @@ this captured transcript — the code path is identical to a real interactive
 run). `proposal_log.json` was reset back to `{"entries": []}` afterward so the
 tool starts clean for Károly's actual use.
 
+*Updated note:* the schema later grew two more required fields, `greeting`
+and `sign_off` (see README's Design decisions) — the JSON below was updated
+to include them so this stays a valid example against the current schema,
+but this specific walkthrough predates that change; the greeting/sign_off
+mechanism itself was verified separately (see the end-to-end demo referenced
+in README).
+
 ## The job posting
 
 ```
@@ -50,6 +57,7 @@ exist anywhere in `experience_profile.json`.
 
 ```json
 {
+  "greeting": "Hi there,",
   "opening_observation": "Your posting is really about building trust into automation: pricing decisions, quote generation, and ERP/CRM writes are exactly the kind of actions that damage client relationships if an agent gets them wrong without a human checking first.",
   "problem_understanding": "You're not looking for someone to bolt an LLM onto existing workflows. You need an agentic system where every consequential action, a quote going out, a CRM record changing, passes through an explicit approval gate, built by someone who already works this way day to day rather than someone learning agent design on your budget.",
   "relevant_experience": {
@@ -78,6 +86,7 @@ exist anywhere in `experience_profile.json`.
   },
   "insight_or_question": "One thing worth flagging before we even start: the riskiest part of this build usually isn't the LLM email processing, it's making the human-approval gate genuinely block, not just log and continue, on the ERP/CRM write path. That's where a race condition or a swallowed exception can quietly cause a duplicate order or a wrong price to go out. Which ERP or CRM are you integrating with first, and is there already a sandbox account for it, or would that need to be set up?",
   "closing": "Happy to walk through how I'd structure the approval-gate layer on a short call.",
+  "sign_off": "Best regards,",
   "availability": "40 hours/week starting September.",
   "meta": {
     "job_posting_hash": "sha256:dd0f2a0480a6cd17288aea451003ad6848d928ed3df057deeb5f91ba0603ce7e",
@@ -130,6 +139,7 @@ structure), plus an honest, one-line disclosure:
 
 ```json
 {
+  "greeting": "Hi there,",
   "opening_observation": "Your posting is really about building trust into automation: pricing decisions, quote generation, and ERP/CRM writes are exactly the kind of actions that damage client relationships if an agent gets them wrong without a human checking first.",
   "problem_understanding": "You're not looking for someone to bolt an LLM onto existing workflows. You need an agentic system where every consequential action, a quote going out, a CRM record changing, passes through an explicit approval gate, built by someone who already works this way day to day rather than someone learning agent design on your budget.",
   "relevant_experience": {
@@ -154,6 +164,7 @@ structure), plus an honest, one-line disclosure:
   },
   "insight_or_question": "One thing worth flagging before we even start: the riskiest part of this build usually isn't the LLM email processing, it's making the human-approval gate genuinely block, not just log and continue, on the ERP/CRM write path. That's where a race condition or a swallowed exception can quietly cause a duplicate order or a wrong price to go out. Which ERP or CRM are you integrating with first, and is there already a sandbox account for it, or would that need to be set up? I haven't personally shipped a SAP or NetSuite integration, so knowing the target system upfront would let me flag early where I'd need to ramp up versus where I can move fast.",
   "closing": "Happy to walk through how I'd structure the approval-gate layer on a short call.",
+  "sign_off": "Best regards,",
   "availability": "40 hours/week starting September.",
   "meta": {
     "job_posting_hash": "sha256:dd0f2a0480a6cd17288aea451003ad6848d928ed3df057deeb5f91ba0603ce7e",
@@ -165,8 +176,8 @@ structure), plus an honest, one-line disclosure:
 
 Re-validating: every `source_ref` (`exp-001`, `exp-004`, `exp-006`, `exp-007`)
 exists in the profile, no banned phrases are present, all 7 structural
-elements are there, and the word count (claims + narrative fields) is 347 —
-inside the 150–350 word range. Result:
+elements are there, and the word count (claims + narrative fields, excluding
+`greeting`/`sign_off`) is 347 — inside the 150–350 word range. Result:
 
 ```json
 {
@@ -211,6 +222,12 @@ real, passing the full structured draft (not just its rendered text) as
 `draft`, plus that token. `log_decision` refuses to log `"approved"`
 without a valid, matching token — see README's Design decisions section
 for exactly what that does and doesn't guarantee.
+
+The "paste this into Upwork" text the hook prints is `greeting`, then the
+7-part content with each claim as its own paragraph (not merged into one
+dense block), then `sign_off` plus the signer's name — see README's Design
+decisions section for why the greeting/sign-off placement is conditional on
+what the posting itself requires.
 
 ## 6. LOG — the resulting `proposal_log.json` entry
 

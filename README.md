@@ -140,6 +140,21 @@ unchanged regardless of this mechanism: nothing in this codebase can submit
 to Upwork — that stays a manual, human-only action outside the tool's
 reach.
 
+**Greeting placement is conditional, not templated.** Some postings dictate
+the literal first words of the proposal (e.g. "start with MVP READY" as a
+screening filter); a fixed "Hi," prefix would either duplicate or fight
+that instruction. So the required opening phrase, if any, and the
+salutation both live in one `greeting` field — the phrase always comes
+first, the salutation right after — rather than the hook hard-coding a
+static greeting. `sign_off` is similarly generated per draft (matching the
+posting's register: "Best regards," / "Best," / "Cheers,") rather than
+fixed, since a static choice would misread a casual startup posting or an
+enterprise one about half the time. Neither field counts toward the
+150-350 word length check — they're not the argument, and padding them
+shouldn't let a draft dodge that check — but both are still scanned for
+banned phrases, since "Dear Sir/Madam" is exactly the kind of phrase that
+would otherwise sneak in specifically through the greeting.
+
 ## Setup
 
 ```

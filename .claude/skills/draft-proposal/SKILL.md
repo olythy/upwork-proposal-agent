@@ -47,7 +47,27 @@ be traceable to a specific, real piece of experience.
      of the summary/detail split, which exists to keep this skill's own
      context usage bounded as the log grows over time.
 
-4. **Write the draft following the 7-part structure:**
+4. **Write the draft.** The full shape is: `greeting` → the 7-part
+   structure below → `sign_off`. Each claim should also read as a
+   self-contained 1-2 sentence unit — the rendered draft puts each claim on
+   its own line, not merged into the surrounding prose, so don't write one
+   claim to grammatically flow into the next.
+
+   **`greeting`** — the very first line of the whole proposal:
+   - If the posting has an explicit required opening (e.g. "start your
+     proposal with X"), that phrase comes first, verbatim, immediately
+     followed by the salutation — e.g. `"MVP READY. Hi there,"`. Never
+     repeat that phrase inside `opening_observation`; it belongs in
+     `greeting` only.
+   - If a client name is discoverable in the posting text, personalize it
+     — `"Hi John,"` / `"Hello Sandra,"` — and vary the phrasing naturally
+     rather than always using the same template.
+   - If no name is discoverable and there's no required opening phrase,
+     use a light, generic opener — `"Hi,"` / `"Hi there,"` / `"Hello,"` —
+     and vary which one, don't default to the same one every time.
+
+   **The 7-part structure** (pure content — `opening_observation` never
+   carries a compliance phrase; that lives in `greeting`):
    1. **A strong observation** about the client's real problem — react to a
       concrete detail from the posting, not a generality.
    2. **Demonstrate understanding of the product/situation** — show that
@@ -65,6 +85,13 @@ be traceable to a specific, real piece of experience.
    6. **Positioning** as someone who brings stability and momentum — brief,
       fact-based, not self-promotional.
    7. **A natural, simple closing** — short, not a forced call-to-action.
+
+   **`sign_off`** — just the phrase, not the name (the signer's name is
+   appended automatically when the draft is rendered — never include it
+   yourself). Match the posting's register: `"Best regards,"` for a more
+   formal/corporate posting, `"Best,"` for a neutral one, `"Cheers,"` for a
+   casual/startup one — use judgment, don't default to the same one every
+   time.
 
 5. **Source every substantive claim.** Any sentence that references
    experience, a skill, or past work must go into the
@@ -88,7 +115,10 @@ be traceable to a specific, real piece of experience.
 
 7. **Banned elements — avoid:**
    - Generic, worn-out Upwork phrases: "I'd love to help", "I am confident
-     that", "Dear Sir/Madam", "As an AI...".
+     that", "Dear Sir/Madam", "As an AI...". This applies to `greeting` and
+     `sign_off` too, not just the 7-part content — "Dear Sir/Madam" is
+     exactly the kind of phrase that would otherwise sneak in through the
+     greeting specifically.
    - Huge, list-like skill dumps ("I have experience in: X, Y, Z, W, V, ...").
    - Over-polished, robotic, marketing-style tone. The goal is a
      competent, calm, specific tone — as if writing a technical assessment
@@ -102,10 +132,13 @@ be traceable to a specific, real piece of experience.
 
 ## Output
 
-A JSON object exactly matching the `schemas/proposal_schema.json` schema.
-After the JSON, if any evidence was missing, list it in a separate section:
-"Missing evidence: <description of the claim> — no matching
-experience_profile entry, please add one manually if relevant."
+A JSON object exactly matching the `schemas/proposal_schema.json` schema
+(`greeting` and `sign_off` are required fields alongside the 7-part
+content — note that `greeting`/`sign_off` don't count toward the 150-350
+word length check, so don't pad them to affect it). After the JSON, if any
+evidence was missing, list it in a separate section: "Missing evidence:
+<description of the claim> — no matching experience_profile entry, please
+add one manually if relevant."
 
 ## Retry case
 

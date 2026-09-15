@@ -94,6 +94,7 @@ def valid_draft(test_profile: dict) -> dict:
     ids = {e["id"] for e in test_profile["entries"]}
     assert {"exp-001", "exp-006"} <= ids, "fixture assumes exp-001/exp-006 exist in test_profile"
     return {
+        "greeting": "Hi there,",
         "opening_observation": (
             "Your posting describes a pricing engine that keeps breaking whenever a new "
             "regional exception gets added, which usually means the exceptions were never "
@@ -134,6 +135,7 @@ def valid_draft(test_profile: dict) -> dict:
             "Happy to look at the current pricing code on a short call and sketch out "
             "where the risk actually lives."
         ),
+        "sign_off": "Best,",
         "meta": {
             "job_posting_hash": "sha256:testfixturehash",
             "created_at": "2026-09-14T09:00:00Z",

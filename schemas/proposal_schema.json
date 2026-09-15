@@ -5,18 +5,25 @@
   "description": "Structured representation of an Upwork proposal draft. Every substantive claim must cite a source_ref pointing to an entry in experience_profile.json.",
   "type": "object",
   "required": [
+    "greeting",
     "opening_observation",
     "problem_understanding",
     "relevant_experience",
     "insight_or_question",
     "closing",
+    "sign_off",
     "meta"
   ],
   "additionalProperties": false,
   "properties": {
+    "greeting": {
+      "type": "string",
+      "description": "The very first line of the proposal. If the posting requires a literal opening phrase (e.g. \"start with MVP READY\"), that phrase comes first, verbatim, followed by the salutation (e.g. \"MVP READY. Hi there,\"). Otherwise just the salutation, personalized with the client's name if one is discoverable in the posting (e.g. \"Hi John,\"), or a light, non-templated generic opener if not (e.g. \"Hi,\" / \"Hi there,\" / \"Hello,\" — vary it). Not counted toward the word-length check, but still scanned for banned phrases.",
+      "minLength": 1
+    },
     "opening_observation": {
       "type": "string",
-      "description": "Strong, specific observation about the client's actual problem, based on a close reading of the posting.",
+      "description": "Strong, specific observation about the client's actual problem, based on a close reading of the posting. Pure content only — any required compliance phrase belongs in `greeting`, not repeated here.",
       "minLength": 1
     },
     "problem_understanding": {
@@ -61,6 +68,11 @@
     "closing": {
       "type": "string",
       "description": "Natural, simple closing.",
+      "minLength": 1
+    },
+    "sign_off": {
+      "type": "string",
+      "description": "The sign-off phrase only (e.g. \"Best,\" / \"Best regards,\" / \"Cheers,\"), chosen to match the posting's register/formality — not the signer's name, which is appended by the renderer. Not counted toward the word-length check, but still scanned for banned phrases.",
       "minLength": 1
     },
     "target_rate": {

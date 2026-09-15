@@ -130,6 +130,35 @@ def test_edit_does_not_approve_and_logs_edited(draft_file, passing_report_file, 
     assert entry["full_draft"] == updated_draft  # the pre-edit draft was logged for context
 
 
+def test_final_text_opens_with_greeting_and_closes_with_signed_sign_off(
+    draft_file, passing_report_file, tmp_data_dir
+):
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(passing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "APPROVED",
+    )
+    assert result.returncode == 0
+
+    marker = "Final text (paste this into Upwork):\n\n"
+    start = result.stdout.index(marker) + len(marker)
+    end = result.stdout.index("\n\nAPPROVED. Logged decision:")
+    final_text = result.stdout[start:end]
+
+    draft = json.loads(draft_file.read_text(encoding="utf-8"))
+    assert final_text.startswith(draft["greeting"])
+    assert final_text.rstrip().endswith(f"{draft['sign_off']}\nKároly")
+    # Each claim is its own paragraph, not merged into one dense block.
+    for claim in draft["relevant_experience"]["claims"]:
+        assert f"\n\n{claim['text']}\n\n" in f"\n\n{final_text}\n\n"
+
+
 def test_test_mode_without_input_errors_out(draft_file, passing_report_file, tmp_data_dir):
     result = _run_hook(
         "--draft",

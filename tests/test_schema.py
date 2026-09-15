@@ -23,11 +23,13 @@ def test_draft_with_fake_source_ref_still_matches_schema(draft_with_fake_source_
 @pytest.mark.parametrize(
     "missing_field",
     [
+        "greeting",
         "opening_observation",
         "problem_understanding",
         "relevant_experience",
         "insight_or_question",
         "closing",
+        "sign_off",
         "meta",
     ],
 )
