@@ -159,6 +159,74 @@ def test_final_text_opens_with_greeting_and_closes_with_signed_sign_off(
         assert f"\n\n{claim['text']}\n\n" in f"\n\n{final_text}\n\n"
 
 
+def test_rejected_without_reason_logs_decision_and_does_not_approve(
+    draft_file, passing_report_file, tmp_data_dir
+):
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(passing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "REJECTED",
+    )
+    assert result.returncode == 2
+    assert "REJECTED — this draft will not be sent." in result.stdout
+    assert "Reason:" not in result.stdout
+
+    updated_draft = json.loads(draft_file.read_text(encoding="utf-8"))
+    assert updated_draft["meta"]["status"] == "rejected"
+
+    log = json.loads((tmp_data_dir / "proposal_log.json").read_text(encoding="utf-8"))
+    assert len(log["entries"]) == 1
+    entry = log["entries"][0]
+    assert entry["decision"] == "rejected"
+    assert entry["notes"] is None
+    assert entry["full_draft"] == updated_draft
+
+
+def test_rejected_with_reason_is_logged_as_notes(draft_file, passing_report_file, tmp_data_dir):
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(passing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "REJECTED: just a test run, not a real application",
+    )
+    assert result.returncode == 2
+    assert "Reason: just a test run, not a real application" in result.stdout
+
+    log = json.loads((tmp_data_dir / "proposal_log.json").read_text(encoding="utf-8"))
+    assert log["entries"][0]["notes"] == "just a test run, not a real application"
+
+
+def test_rejected_does_not_require_a_gate_token(draft_file, passing_report_file, tmp_data_dir):
+    # No issue_gate_token call is made on this path — if log_decision ever
+    # required one for "rejected" too, this would fail with a clear error
+    # instead of succeeding.
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(passing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "REJECTED",
+    )
+    assert result.returncode == 2
+    assert "gate_token" not in result.stdout
+    assert "gate_token" not in result.stderr
+
+
 def test_test_mode_without_input_errors_out(draft_file, passing_report_file, tmp_data_dir):
     result = _run_hook(
         "--draft",

@@ -16,9 +16,17 @@ operator types an explicit response:
                          printed back (and logged as decision "edited") so
                          the calling workflow can route it back to the ACT
                          step of draft-proposal for a rewrite.
+  - "REJECTED"        -> the draft is dropped outright — not because it
+    / "REJECTED: <reason>"  needs editing, but because the human doesn't
+                         want to send it at all (e.g. a test run, or a
+                         posting no longer worth applying to). Logged as
+                         decision "rejected" (no gate_token needed, same as
+                         "edited") and marks the draft's meta.status as
+                         "rejected". The reason after the colon is optional.
 
-Nothing may reach "ready_to_submit" without one of these two explicit human
-responses. There is no default/timeout path that approves automatically.
+Nothing may reach "ready_to_submit" without one of these three explicit
+human responses. There is no default/timeout path that approves
+automatically.
 
 For automated tests ONLY, pass --test-mode together with --input, which
 supplies the human response non-interactively instead of blocking on stdin.
@@ -133,8 +141,9 @@ def render_report(report: dict) -> str:
 def prompt_for_decision(test_mode: bool, test_input: str | None) -> str:
     prompt = (
         "\nApprove this draft for submission?\n"
-        "  Type APPROVED to approve as-is, or\n"
-        "  Type EDIT: <what to change> to send it back for a rewrite.\n> "
+        "  Type APPROVED to approve as-is,\n"
+        "  Type EDIT: <what to change> to send it back for a rewrite, or\n"
+        "  Type REJECTED: <optional reason> to drop this one without editing.\n> "
     )
     if test_mode:
         if test_input is None:
@@ -148,11 +157,18 @@ def prompt_for_decision(test_mode: bool, test_input: str | None) -> str:
         except EOFError:
             raise SystemExit(
                 "No input received (EOF) — the gate cannot proceed without an "
-                "explicit APPROVED or EDIT: response."
+                "explicit APPROVED, EDIT:, or REJECTED response."
             ) from None
-        if response == "APPROVED" or response.startswith("EDIT: "):
+        if (
+            response == "APPROVED"
+            or response.startswith("EDIT: ")
+            or response == "REJECTED"
+            or response.startswith("REJECTED:")
+        ):
             return response
-        print('Invalid response. Type exactly "APPROVED" or "EDIT: <instruction>".')
+        print(
+            'Invalid response. Type exactly "APPROVED", "EDIT: <instruction>", or "REJECTED" / "REJECTED: <reason>".'
+        )
 
 
 def _server_params(data_dir: str | None) -> StdioServerParameters:
@@ -268,22 +284,42 @@ def main() -> int:
         print(json.dumps(logged, ensure_ascii=False, indent=2))
         return 0
 
-    # EDIT: <instruction>
-    edit_instruction = decision_text[len("EDIT: ") :].strip()
+    if decision_text.startswith("EDIT: "):
+        edit_instruction = decision_text[len("EDIT: ") :].strip()
+        logged = asyncio.run(
+            call_log_decision(
+                proposal_id=proposal_id,
+                decision="edited",
+                draft=draft,
+                notes=edit_instruction,
+                data_dir=args.data_dir,
+            )
+        )
+        print("\nEDIT REQUESTED — routing back to the ACT step with this instruction:")
+        print(f"  {edit_instruction}")
+        print("\nLogged decision:")
+        print(json.dumps(logged, ensure_ascii=False, indent=2))
+        return 3
+
+    # REJECTED / REJECTED: <reason>
+    reason = decision_text[len("REJECTED:") :].strip() if decision_text.startswith("REJECTED:") else None
+    draft["meta"]["status"] = "rejected"
+    save_json(draft_path, draft)
     logged = asyncio.run(
         call_log_decision(
             proposal_id=proposal_id,
-            decision="edited",
+            decision="rejected",
             draft=draft,
-            notes=edit_instruction,
+            notes=reason,
             data_dir=args.data_dir,
         )
     )
-    print("\nEDIT REQUESTED — routing back to the ACT step with this instruction:")
-    print(f"  {edit_instruction}")
+    print("\nREJECTED — this draft will not be sent.")
+    if reason:
+        print(f"  Reason: {reason}")
     print("\nLogged decision:")
     print(json.dumps(logged, ensure_ascii=False, indent=2))
-    return 3
+    return 2
 
 
 if __name__ == "__main__":

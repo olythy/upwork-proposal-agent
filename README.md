@@ -39,11 +39,13 @@ Job posting text
         │       - are there any banned generic phrases?
         │       - are all 7 required structural elements present?
         │       - length and tone rules
-        ├── FAIL → [RETRY] one rewrite pass based on the issue(s) → back to VALIDATE
+        ├── FAIL → [RETRY] targeted fix based on the issue(s) → back to VALIDATE
+        │          (max 2 automatic passes, then stop and ask — see SKILL.md)
         ▼ PASS
    [ESCALATE / HUMAN GATE]  a hook halts the process,
         │  prints the draft + validation report,
-        │  and waits for an explicit "APPROVED" or "EDIT: ..." input
+        │  and waits for an explicit "APPROVED", "EDIT: ...", or
+        │  "REJECTED" / "REJECTED: <reason>" input
         ▼
    [LOG]   the decision + final text is appended to proposal_log.json
 ```
@@ -60,10 +62,13 @@ Job posting text
    draft: whether every `source_ref` is real, whether any banned phrases
    are present, whether the structure is complete, the length, and whether
    every concrete question the posting asks (rate, availability, residency)
-   is answered. On failure, one retry pass follows, then re-validation.
+   is answered. On failure, a targeted fix pass follows, then re-validation
+   — capped at 2 automatic attempts before stopping to ask instead.
 4. **ESCALATE / HUMAN GATE** — `pre-submit-gate.py` blocks the process until
-   Károly gives an explicit `APPROVED` or `EDIT: ...` response. Nothing may
-   reach "submit-ready" status without human approval.
+   Károly gives an explicit `APPROVED`, `EDIT: ...`, or `REJECTED` /
+   `REJECTED: <reason>` response. Nothing may reach "submit-ready" status
+   without human approval, and nothing is sent just because it wasn't
+   explicitly rejected either.
 5. **LOG** — the final decision and text are appended to
    `proposal_log.json` via the `log_decision` MCP tool.
 
