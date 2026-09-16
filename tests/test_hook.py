@@ -43,7 +43,7 @@ def test_blocks_when_no_input_given(draft_file, passing_report_file, tmp_data_di
     assert "No input received (EOF)" in result.stdout or "No input received (EOF)" in result.stderr
 
 
-def test_blocks_when_report_did_not_pass(draft_file, failing_report_file, tmp_data_dir):
+def test_approved_is_blocked_when_report_did_not_pass(draft_file, failing_report_file, tmp_data_dir):
     result = _run_hook(
         "--draft",
         str(draft_file),
@@ -56,8 +56,81 @@ def test_blocks_when_report_did_not_pass(draft_file, failing_report_file, tmp_da
         "APPROVED",
     )
     assert result.returncode != 0
-    assert "BLOCKED" in result.stderr
+    assert "APPROVED BLOCKED" in result.stderr
     assert "has not passed validation" in result.stderr
+
+    # Nothing was approved or logged — the draft is untouched, no log entry exists.
+    updated_draft = json.loads(draft_file.read_text(encoding="utf-8"))
+    assert updated_draft["meta"]["status"] == "draft"
+    log = json.loads((tmp_data_dir / "proposal_log.json").read_text(encoding="utf-8"))
+    assert log["entries"] == []
+
+
+def test_rejected_allowed_when_report_did_not_pass(draft_file, failing_report_file, tmp_data_dir):
+    # The core point of this feature: a failing draft can still be
+    # rejected (or edited) through this same gate, so the "draft-proposal
+    # gave up after 2 retries" escalation has somewhere to log a decision
+    # instead of being an unlogged, purely conversational dead end.
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(failing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "REJECTED: gave up after 2 retries, still missing a real source_ref",
+    )
+    assert result.returncode == 2
+    assert "REJECTED — this draft will not be sent." in result.stdout
+
+    updated_draft = json.loads(draft_file.read_text(encoding="utf-8"))
+    assert updated_draft["meta"]["status"] == "rejected"
+
+    log = json.loads((tmp_data_dir / "proposal_log.json").read_text(encoding="utf-8"))
+    assert len(log["entries"]) == 1
+    assert log["entries"][0]["decision"] == "rejected"
+    assert log["entries"][0]["notes"] == "gave up after 2 retries, still missing a real source_ref"
+
+
+def test_edit_allowed_when_report_did_not_pass(draft_file, failing_report_file, tmp_data_dir):
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(failing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        "--test-mode",
+        "--input",
+        "EDIT: try again with a real source_ref",
+    )
+    assert result.returncode == 3
+    assert "EDIT REQUESTED" in result.stdout
+
+    log = json.loads((tmp_data_dir / "proposal_log.json").read_text(encoding="utf-8"))
+    assert log["entries"][0]["decision"] == "edited"
+
+
+def test_interactive_prompt_rejects_approved_then_accepts_rejected_when_report_failed(
+    draft_file, failing_report_file, tmp_data_dir
+):
+    # Non-test-mode path: a human tries APPROVED first (refused, with a
+    # specific explanation, not the generic "invalid response" message),
+    # then gives a REJECTED instead.
+    result = _run_hook(
+        "--draft",
+        str(draft_file),
+        "--report",
+        str(failing_report_file),
+        "--data-dir",
+        str(tmp_data_dir),
+        stdin_input="APPROVED\nREJECTED\n",
+    )
+    assert result.returncode == 2
+    assert "APPROVED isn't available for a draft that hasn't passed validation" in result.stdout
+    assert "REJECTED — this draft will not be sent." in result.stdout
 
 
 def test_invalid_response_is_rejected_until_valid_one_given(draft_file, passing_report_file, tmp_data_dir):

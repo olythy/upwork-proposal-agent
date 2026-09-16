@@ -39,14 +39,16 @@ Job posting text
         │       - are there any banned generic phrases?
         │       - are all 7 required structural elements present?
         │       - length and tone rules
-        ├── FAIL → [RETRY] targeted fix based on the issue(s) → back to VALIDATE
-        │          (max 2 automatic passes, then stop and ask — see SKILL.md)
-        ▼ PASS
-   [ESCALATE / HUMAN GATE]  a hook halts the process,
-        │  prints the draft + validation report,
-        │  and waits for an explicit "APPROVED", "EDIT: ...", or
+        ├── FAIL, retries left → [RETRY] targeted fix → back to VALIDATE
+        │                        (max 2 automatic passes)
+        ▼ PASS, or retries exhausted
+   [ESCALATE / HUMAN GATE]  a hook halts the process, prints the draft +
+        │  validation report, and waits for an explicit "APPROVED"
+        │  (refused unless the report passed), "EDIT: ...", or
         │  "REJECTED" / "REJECTED: <reason>" input
-        ▼
+        ├── EDIT → back to ACT
+        ├── REJECTED → [LOG] (stop here)
+        ▼ APPROVED
    [LOG]   the decision + final text is appended to proposal_log.json
 ```
 
@@ -63,10 +65,13 @@ Job posting text
    are present, whether the structure is complete, the length, and whether
    every concrete question the posting asks (rate, availability, residency)
    is answered. On failure, a targeted fix pass follows, then re-validation
-   — capped at 2 automatic attempts before stopping to ask instead.
+   — capped at 2 automatic attempts, after which the still-failing draft
+   goes to the same human gate as a passing one would (see below), just
+   without `APPROVED` on the menu.
 4. **ESCALATE / HUMAN GATE** — `pre-submit-gate.py` blocks the process until
    Károly gives an explicit `APPROVED`, `EDIT: ...`, or `REJECTED` /
-   `REJECTED: <reason>` response. Nothing may reach "submit-ready" status
+   `REJECTED: <reason>` response — `APPROVED` only if the draft actually
+   passed validation. Nothing may reach "submit-ready" status
    without human approval, and nothing is sent just because it wasn't
    explicitly rejected either.
 5. **LOG** — the final decision and text are appended to
@@ -159,6 +164,22 @@ enterprise one about half the time. Neither field counts toward the
 shouldn't let a draft dodge that check — but both are still scanned for
 banned phrases, since "Dear Sir/Madam" is exactly the kind of phrase that
 would otherwise sneak in specifically through the greeting.
+
+**`pre-submit-gate.py` also serves the retry-cap escalation, not just the
+final approval.** After `draft-proposal`'s 2 automatic retries, the
+original design just had the skill "stop and ask" the user directly in
+conversation — but that answer never went anywhere: `log_decision` was
+never called, so `proposal_log.json` would show no record of a draft that
+was given up on. The fix isn't a second gate — it's letting this one
+accept a failing report too. `APPROVED` is refused whenever
+`status != "pass"` (both in the interactive prompt and, redundantly, in
+`main()` for `--test-mode`, which bypasses the prompt's own loop), but
+`EDIT`/`REJECTED` work exactly as they do on a passing draft, since
+neither can let anything unvalidated through — rejecting or editing a
+failing draft is never the unsafe half of this system. Every human
+decision this loop can produce, whatever the report said, now goes
+through the one logged channel instead of some falling through as an
+unrecorded conversational aside.
 
 ## Setup
 

@@ -28,6 +28,14 @@ Nothing may reach "ready_to_submit" without one of these three explicit
 human responses. There is no default/timeout path that approves
 automatically.
 
+This same gate also serves the earlier "draft-proposal gave up after its
+2-retry cap" escalation, not just the final pass-the-validator moment: if
+the report's status isn't "pass", APPROVED is refused (both in the
+interactive prompt and, redundantly, in main() for --test-mode), but EDIT
+and REJECTED still work exactly as above — rejecting or editing a failing
+draft is never unsafe, so there's no reason to force that decision through
+some other, unlogged path.
+
 For automated tests ONLY, pass --test-mode together with --input, which
 supplies the human response non-interactively instead of blocking on stdin.
 This flag must never be used for a real submission — it exists solely so CI
@@ -138,13 +146,25 @@ def render_report(report: dict) -> str:
     return "\n".join(lines)
 
 
-def prompt_for_decision(test_mode: bool, test_input: str | None) -> str:
-    prompt = (
-        "\nApprove this draft for submission?\n"
-        "  Type APPROVED to approve as-is,\n"
-        "  Type EDIT: <what to change> to send it back for a rewrite, or\n"
-        "  Type REJECTED: <optional reason> to drop this one without editing.\n> "
-    )
+def prompt_for_decision(test_mode: bool, test_input: str | None, can_approve: bool) -> str:
+    """`can_approve` is False when the report's status isn't "pass" — a
+    failing draft can still be EDIT'd or REJECTED (neither is unsafe: no
+    unvalidated text goes anywhere either way), but APPROVED is refused,
+    both here (interactively) and again in main() (for --test-mode, which
+    skips this function's own loop)."""
+    if can_approve:
+        prompt = (
+            "\nApprove this draft for submission?\n"
+            "  Type APPROVED to approve as-is,\n"
+            "  Type EDIT: <what to change> to send it back for a rewrite, or\n"
+            "  Type REJECTED: <optional reason> to drop this one without editing.\n> "
+        )
+    else:
+        prompt = (
+            "\nThis draft has not passed validation, so APPROVED isn't available.\n"
+            "  Type EDIT: <what to change> to send it back for a rewrite, or\n"
+            "  Type REJECTED: <optional reason> to drop this one without editing.\n> "
+        )
     if test_mode:
         if test_input is None:
             raise SystemExit("--test-mode requires --input")
@@ -157,18 +177,22 @@ def prompt_for_decision(test_mode: bool, test_input: str | None) -> str:
         except EOFError:
             raise SystemExit(
                 "No input received (EOF) — the gate cannot proceed without an "
-                "explicit APPROVED, EDIT:, or REJECTED response."
+                "explicit EDIT: or REJECTED response" + (", or APPROVED" if can_approve else "") + "."
             ) from None
-        if (
-            response == "APPROVED"
-            or response.startswith("EDIT: ")
-            or response == "REJECTED"
-            or response.startswith("REJECTED:")
-        ):
+        is_edit = response.startswith("EDIT: ")
+        is_rejected = response == "REJECTED" or response.startswith("REJECTED:")
+        is_approved = response == "APPROVED"
+        if is_approved and not can_approve:
+            print(
+                "APPROVED isn't available for a draft that hasn't passed validation. Use EDIT: or REJECTED."
+            )
+            continue
+        if is_edit or is_rejected or is_approved:
             return response
-        print(
-            'Invalid response. Type exactly "APPROVED", "EDIT: <instruction>", or "REJECTED" / "REJECTED: <reason>".'
-        )
+        options = '"EDIT: <instruction>", or "REJECTED" / "REJECTED: <reason>"'
+        if can_approve:
+            options = '"APPROVED", ' + options
+        print(f"Invalid response. Type exactly {options}.")
 
 
 def _server_params(data_dir: str | None) -> StdioServerParameters:
@@ -253,18 +277,28 @@ def main() -> int:
     print()
     print(render_report(report))
 
-    if report.get("status") != "pass":
+    can_approve = report.get("status") == "pass"
+    if not can_approve:
         print(
-            "\nBLOCKED: this draft has not passed validation (status="
-            f"{report.get('status')!r}). The human gate only runs on validated drafts.",
+            "\nNote: this draft has not passed validation (status="
+            f"{report.get('status')!r}) — APPROVED is not available here. "
+            "You may still EDIT it or REJECT it; either is logged normally.",
             file=sys.stderr,
         )
-        return 1
 
-    decision_text = prompt_for_decision(args.test_mode, args.test_input)
+    decision_text = prompt_for_decision(args.test_mode, args.test_input, can_approve)
     proposal_id = draft.get("meta", {}).get("job_posting_hash", "unknown-proposal")
 
     if decision_text == "APPROVED":
+        if not can_approve:
+            # Unreachable via the interactive prompt (which already refuses
+            # this); still enforced here because --test-mode skips that
+            # loop entirely. APPROVED must never proceed without a passing
+            # report, by whichever path a caller reaches this line.
+            raise SystemExit(
+                "APPROVED BLOCKED: this draft has not passed validation "
+                f"(status={report.get('status')!r}). Use EDIT: or REJECTED instead."
+            )
         draft["meta"]["status"] = "approved"
         save_json(draft_path, draft)
         print("\nFinal text (paste this into Upwork):\n")

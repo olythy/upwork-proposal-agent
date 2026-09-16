@@ -150,11 +150,20 @@ the missing rate if the posting asked for one). Submit the corrected draft
 for re-validation.
 
 **Retry cap: 2 automatic correction passes, then stop and ask.** This isn't
-a safety limit — `pre-submit-gate.py` independently blocks anything that
-isn't `status: "pass"`, no matter how many retries happened, so a stuck
-loop can never let unvalidated text through. It's a cost/time limit: after
-2 failed validation attempts on the same draft, don't attempt a 3rd
-automatic rewrite. Instead, show the current draft and the unresolved
-`issues[]` as they stand, and ask the user how to proceed (e.g. relax a
-rule, provide the missing information yourself, or accept a specific
-trade-off) rather than continuing to loop on your own.
+a safety limit — `pre-submit-gate.py` independently refuses `APPROVED` on
+anything that isn't `status: "pass"`, no matter how many retries happened,
+so a stuck loop can never let unvalidated text through. It's a cost/time
+limit: after 2 failed validation attempts on the same draft, don't attempt
+a 3rd automatic rewrite.
+
+Instead, run `pre-submit-gate.py` with the still-failing report, the same
+as you would for a passing one. The gate accepts a failing report too — it
+only refuses `APPROVED` on one, not the prompt itself — so the user's
+"how do you want to proceed" decision gets asked and logged through the
+same single channel as every other decision in this loop, rather than
+being a one-off, unlogged question in the conversation:
+- `EDIT: <instruction>` — the user tells you what to change (relax a rule,
+  supply the missing information themselves, accept a specific trade-off);
+  apply it and re-validate, resetting the retry count for this new attempt.
+- `REJECTED` / `REJECTED: <reason>` — the user drops this job posting
+  outright; log it and stop, don't keep trying.
